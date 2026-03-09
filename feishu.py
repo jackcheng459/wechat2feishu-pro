@@ -73,7 +73,15 @@ def create_document(
         import base64 as _base64
         
         for idx, img_url in enumerate(image_urls, 1):
-            b64 = (image_data or {}).get(img_url, "")
+            base_img_url = img_url.split("?")[0]
+            
+            # 从 Playwright 捕获的数据中模糊匹配
+            b64 = ""
+            for loaded_url, data in (image_data or {}).items():
+                if loaded_url.split("?")[0] == base_img_url:
+                    b64 = data
+                    break
+            
             try:
                 if b64:
                     img_bytes = _base64.b64decode(b64)
@@ -84,10 +92,15 @@ def create_document(
                 else:
                     headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://mp.weixin.qq.com/"}
                     resp = requests.get(img_url, headers=headers, timeout=15)
-                    if resp.status_code != 200: continue
+                    if resp.status_code != 200 or not resp.content: continue
                     img_bytes = resp.content
                     mime = resp.headers.get("content-type", "image/jpeg")
                     ext = ".jpg" if "jpeg" in mime else ".png"
+
+                if not img_bytes or len(img_bytes) < 100:
+                    print(f"  ⚠️ 图片 {idx} 数据为空，跳过")
+                    continue
+
 
                 files = {"file": (f"img_{idx}{ext}", img_bytes, mime)}
                 data = {
@@ -119,7 +132,12 @@ def create_document(
 
     # 3. 将 Markdown 文本上传为 .md 文件
     safe_title = re.sub(r'[\\/:*?"<>|]', '_', title)
+    
+    with open("/tmp/debug_final_markdown.md", "w", encoding="utf-8") as f:
+        f.write(markdown_text)
+        
     md_filename = f"{safe_title}.md"
+
     md_bytes = markdown_text.encode('utf-8')
     
     files_md = {"file": (md_filename, md_bytes, "text/markdown")}
