@@ -82,28 +82,43 @@ def upload_image(image_url: str, user_token: str, doc_id: str = "", image_b64: s
         # 上传到飞书图床
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
             f.write(img_bytes)
-            tmp_path = f.name
+            tmp_path = Path(f.name)
 
         try:
-            upload_resp = requests.post(
-                f"{FEISHU_BASE}/drive/v1/medias/upload_all",
-                headers={"Authorization": f"Bearer {user_token}"},
-                data={
+            # 准备 multipart/form-data
+            with open(tmp_path, "rb") as f_obj:
+                files = {
+                    "file": (f"image_{int(time.time())}{ext}", f_obj, content_type)
+                }
+                data = {
                     "file_name": f"img_{int(time.time())}{ext}",
                     "parent_type": "docx_image",
                     "parent_node": doc_id,
                     "size": str(len(img_bytes)),
-                },
-                files={"file": (f"image{ext}", open(tmp_path, "rb"), content_type)},
-                timeout=30,
-            )
+                }
+                
+                upload_resp = requests.post(
+                    f"{FEISHU_BASE}/drive/v1/medias/upload_all",
+                    headers={"Authorization": f"Bearer {user_token}"},
+                    data=data,
+                    files=files,
+                    timeout=30,
+                )
+            
             result = upload_resp.json()
             if result.get("code") == 0:
-                return result["data"]["file_token"]
+                file_token = result["data"]["file_token"]
+                # 额外调试：确保返回了 token
+                # print(f"  ✅ 图片上传成功: {file_token} (size={len(img_bytes)})")
+                return file_token
+            
             print(f"  ⚠️  图片上传API返回错误 (code={result.get('code')}): {result.get('msg')}")
+            # 记录详细的响应体以便调试
+            # print(f"  DEBUG Response: {json.dumps(result)}")
             return None
         finally:
-            os.unlink(tmp_path)
+            if tmp_path.exists():
+                tmp_path.unlink()
 
     except Exception as e:
         print(f"  ⚠️  图片上传失败 ({image_url[:60]}…): {e}")
