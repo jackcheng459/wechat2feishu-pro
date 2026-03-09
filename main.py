@@ -105,7 +105,7 @@ def cmd_save(dest_type: str, dest_token: str, node_token: str = ""):
         print(json.dumps({"status": "error", "message": str(e)}))
         sys.exit(1)
 
-    # 1. 创建飞书文档（图片上传在 create_document 内部完成，需要 doc_id 作为 parent_node）
+    # 1. 创建飞书文档
     target = SaveTarget(
         type=dest_type,
         token=dest_token,
@@ -126,24 +126,73 @@ def cmd_save(dest_type: str, dest_token: str, node_token: str = ""):
             target=target,
             user_token=user_token,
         )
+        
+        # --- 新增：自动备份一份到本地 ---
+        _export_local(cache)
+
+        # 清理临时文件
+        TEMP_ARTICLE.unlink(missing_ok=True)
+
+        print(json.dumps({
+            "status":       "success",
+            "title":        result.title,
+            "document_url": result.document_url,
+            "document_id":  result.document_id,
+            "message":      f"✅ 转存成功！",
+        }, ensure_ascii=False))
+
     except Exception as e:
         print(json.dumps({"status": "error", "message": str(e)}))
         sys.exit(1)
 
-    # 清理临时文件
-    TEMP_ARTICLE.unlink(missing_ok=True)
 
-    print(json.dumps({
-        "status":       "success",
-        "title":        result.title,
-        "document_url": result.document_url,
-        "document_id":  result.document_id,
-        "message":      f"✅ 转存成功！",
-    }, ensure_ascii=False))
+def _export_local(cache: dict):
+    """将文章备份到本地，使用传统文件夹模式（README.md + images/）"""
+    import base64
+    import re
+    
+    # 1. 准备目录
+    safe_title = re.sub(r'[\\/:*?"<>|]', '_', cache["title"])
+    export_root = Path("/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/exports")
+    article_dir = export_root / f"{safe_title}"
+    img_dir = article_dir / "images"
+    
+    article_dir.mkdir(parents=True, exist_ok=True)
+    img_dir.mkdir(parents=True, exist_ok=True)
+    
+    md_content = cache["markdown"]
+    image_data = cache.get("image_data", {})
+    
+    # 2. 保存图片文件并替换链接
+    img_index = 1
+    for img_url, b64_data in image_data.items():
+        try:
+            img_bytes = base64.b64decode(b64_data)
+            ext = ".jpg"
+            if img_bytes[:4] == b'\x89PNG': ext = ".png"
+            elif img_bytes[:6] in (b'GIF87a', b'GIF89a'): ext = ".gif"
+            elif b'WEBP' in img_bytes[:16]: ext = ".webp"
+            
+            img_filename = f"img_{img_index}{ext}"
+            (img_dir / img_filename).write_bytes(img_bytes)
+            
+            # 替换正文中的链接为本地相对路径
+            base_url = img_url.split("?")[0]
+            md_content = re.sub(re.escape(base_url) + r"[^\s\)]*", f"images/{img_filename}", md_content)
+            img_index += 1
+        except:
+            pass
+            
+    # 3. 写入 README.md
+    (article_dir / f"README.md").write_text(md_content, encoding="utf-8")
+
+
+
+
 
 
 def cmd_list_folders():
-    """列出个人云空间文件夹，供用户选择存储目标"""
+    """列出个人云空间文件夹"""
     from auth import get_valid_token
     from feishu import list_folders
 
@@ -161,7 +210,7 @@ def cmd_list_folders():
 
 
 def cmd_list_wikis():
-    """列出知识库空间，供用户选择存储目标"""
+    """列出知识库空间"""
     from auth import get_valid_token
     from feishu import list_wikis
 
@@ -179,7 +228,7 @@ def cmd_list_wikis():
 
 
 def cmd_list_wiki_nodes(space_id: str, parent_token: str):
-    """列出知识库节点（二级目录），供用户选择"""
+    """列出知识库节点"""
     from auth import get_valid_token
     from feishu import list_wiki_nodes
 
@@ -202,40 +251,26 @@ def cmd_auth():
     login()
 
 
-# ─── CLI 解析 ────────────────────────────────────────────────────────────────
-
 def main():
-    parser = argparse.ArgumentParser(
-        description="微信公众号 → 飞书文档转存工具"
-    )
+    parser = argparse.ArgumentParser(description="微信公众号 → 飞书文档转存工具")
     sub = parser.add_subparsers(dest="command")
 
-    # scrape
     p_scrape = sub.add_parser("scrape", help="抓取并处理文章")
-    p_scrape.add_argument("url", help="公众号文章链接")
+    p_scrape.add_argument("url")
 
-    # save
     p_save = sub.add_parser("save", help="保存文章到飞书")
-    p_save.add_argument("--dest-type",  required=True, choices=["folder", "wiki"],
-                        help="存储类型：folder（个人空间）或 wiki（知识库）")
-    p_save.add_argument("--dest-token", required=True,
-                        help="folder_token 或知识库 space_id")
-    p_save.add_argument("--node-token", default="",
-                        help="知识库父节点 token（仅 wiki 类型需要）")
+    p_save.add_argument("--dest-type", required=True, choices=["folder", "wiki"])
+    p_save.add_argument("--dest-token", required=True)
+    p_save.add_argument("--node-token", default="")
 
-    # list-folders
-    sub.add_parser("list-folders", help="列出个人云空间文件夹")
+    sub.add_parser("list-folders")
+    sub.add_parser("list-wikis")
 
-    # list-wikis
-    sub.add_parser("list-wikis", help="列出知识库")
-
-    # list-wiki-nodes
-    p_nodes = sub.add_parser("list-wiki-nodes", help="列出知识库节点")
-    p_nodes.add_argument("--space-id",     required=True)
+    p_nodes = sub.add_parser("list-wiki-nodes")
+    p_nodes.add_argument("--space-id", required=True)
     p_nodes.add_argument("--parent-token", required=True)
 
-    # auth
-    sub.add_parser("auth", help="飞书 OAuth 授权")
+    sub.add_parser("auth")
 
     args = parser.parse_args()
 
