@@ -79,22 +79,19 @@ def cmd_scrape(url: str):
     }, ensure_ascii=False))
 
 
-def cmd_save(dest_type: str, dest_token: str, node_token: str = ""):
+def cmd_save(dest_type: str, dest_token: str = "", node_token: str = ""):
     """
     阶段2：上传图片 + 创建飞书文档
-    读取 scrape 阶段缓存的文章数据
+    支持存储到：folder（文件夹）, wiki（知识库）, root（主页根目录）
     """
     from auth import get_valid_token
     from feishu import (
-        create_document, SaveTarget
+        create_document, SaveTarget, _get_root_folder
     )
 
-    # 读取缓存
+    # 读取缓存... (保持原逻辑)
     if not TEMP_ARTICLE.exists():
-        print(json.dumps({
-            "status": "error",
-            "message": "未找到待保存的文章，请先运行 scrape 命令。"
-        }))
+        print(json.dumps({"status": "error", "message": "未找到待保存的文章，请先运行 scrape 命令。"}))
         sys.exit(1)
 
     cache = json.loads(TEMP_ARTICLE.read_text())
@@ -105,6 +102,15 @@ def cmd_save(dest_type: str, dest_token: str, node_token: str = ""):
         print(json.dumps({"status": "error", "message": str(e)}))
         sys.exit(1)
 
+    # 处理 "root" 类型：自动获取根目录 Token
+    if dest_type == "root":
+        try:
+            dest_token = _get_root_folder(user_token)
+            dest_type = "folder" # 飞书 API 将根目录视为一个特殊的 folder
+        except Exception as e:
+            print(json.dumps({"status": "error", "message": f"获取主页目录失败: {e}"}))
+            sys.exit(1)
+
     # 1. 创建飞书文档
     target = SaveTarget(
         type=dest_type,
@@ -112,6 +118,7 @@ def cmd_save(dest_type: str, dest_token: str, node_token: str = ""):
         node_token=node_token,
         display_name="",
     )
+
 
     print(json.dumps({"status": "creating_doc", "message": "正在创建飞书文档…"}),
           flush=True)
@@ -262,8 +269,9 @@ def main():
     p_scrape.add_argument("url")
 
     p_save = sub.add_parser("save", help="保存文章到飞书")
-    p_save.add_argument("--dest-type", required=True, choices=["folder", "wiki"])
-    p_save.add_argument("--dest-token", required=True)
+    p_save.add_argument("--dest-type", required=True, choices=["folder", "wiki", "root"])
+    p_save.add_argument("--dest-token", default="")
+
     p_save.add_argument("--node-token", default="")
 
     sub.add_parser("list-folders")
