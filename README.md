@@ -9,20 +9,20 @@
 
 如果你正在使用 OpenClaw (或 Gemini CLI)，可通过以下步骤快速集成：
 
-### 1. 安装技能
+### 1. 一键安装技能
 在终端运行以下命令（根据你的工具名选择 `openclaw` 或 `gemini`）：
 ```bash
-openclaw skills install https://github.com/jackcheng459/WeChat2Feishu-Pro --path skill-pkg/wechat2feishu-pro
-# 或者
-gemini skills install https://github.com/jackcheng459/WeChat2Feishu-Pro --path skill-pkg/wechat2feishu-pro
+openclaw skills install https://github.com/jackcheng459/WeChat2Feishu-Pro
+# 或者直接在 OpenClaw 界面中搜索本项目 URL
 ```
 
 ### 2. 初始化环境
-技能会自动下载。请进入技能目录执行环境安装：
+技能会自动下载并配置。请进入技能目录执行环境安装：
 ```bash
 cd ~/.openclaw/skills/wechat2feishu-pro
 bash scripts/setup.sh
 ```
+
 
 
 ### 3. 配置与授权
