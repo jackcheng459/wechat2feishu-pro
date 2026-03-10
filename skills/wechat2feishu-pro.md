@@ -1,59 +1,40 @@
-# OpenClaw Skill：WeChat2Feishu-Pro (智能转存机器人版)
+# OpenClaw Skill：WeChat2Feishu-Pro (即时转存版)
 
 ## Skill 名称
 `wechat2feishu-pro`
 
 ## 描述
-微信公众号高保真转存机器人。支持自动抓取、多级存储目标管理（指定目录/默认目录/系统主页）以及超时自动备份。
+微信公众号高保真转存机器人。采取“先转存、后调整”的策略，确保文章在用户发送链接后立即安全落盘至飞书云端。
 
 ---
 
-## 🤖 智能决策树 (工作流)
+## 🤖 自动化工作流
 
-### 1. 触发与抓取
+### 1. 触发与执行
 - **触发**：检测到 `mp.weixin.qq.com` 链接。
-- **执行**：运行 `python main.py scrape "{URL}"`。
-- **展示**：向用户展示文章预览（标题、摘要）。
+- **决策逻辑**：
+    - 机器人应**立即**依次调用 `scrape` 和 `save` 命令。
+    - **存储位置选择**：
+        1. 优先使用用户在会话中提到的位置。
+        2. 若未提及，则使用用户记忆（Memory）中的 `default_save_path`。
+        3. 若无记忆，则默认调用 `python main.py save --dest-type root` 存入用户飞书主页。
 
-### 2. 存储目标决策 (核心逻辑)
-机器人应按照以下优先级确定存储位置：
-
-#### **优先级 1：即时指定**
-- 机器人询问：“您想存到哪？”
-- 若用户回复了具体的文件夹名、知识库名或编号，则按该目标执行。
-
-#### **优先级 2：默认路径记忆**
-- 若用户未即时指定，但其个人偏好（Memory）中已设置过 `default_save_path`，则提示用户：“将按您的默认偏好存入：{path_name}”。
-
-#### **优先级 3：系统主页 (Root)**
-- 若上述两者皆无，提示用户：“由于未检测到指定或默认路径，将为您存入飞书云文档主页”。
-
----
-
-### 🕒 5 分钟超时自动落盘规则
-**这是为了确保即便用户不在线，文章也能成功备份。**
-- 发出询问后，启动 **5 分钟** 计时。
-- **若用户未回复**：
-    1.  **有指定/默认记录**：直接运行 `save` 命令存入该位置。
-    2.  **无记录**：运行 `python main.py save --dest-type root` 存入用户主页。
-- **落盘后通知**：“由于您超过 5 分钟未确认，我已自动为您完成备份。”
-
----
-
-## 执行指令示例
-
-### 获取目标
+### 2. 执行指令序列
 ```bash
-# 获取文件夹
-/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/main.py list-folders
+# 第一步：抓取
+/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/main.py scrape "{URL}"
+
+# 第二步：立即转存 (以存入主页为例)
+/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/main.py save --dest-type root
 ```
 
-### 执行保存
-- **存入主页**：`python main.py save --dest-type root`
-- **存入文件夹**：`python main.py save --dest-type folder --dest-token {token}`
-- **存入知识库**：`python main.py save --dest-type wiki --dest-token {space_id} --node-token {node_token}`
+### 3. 反馈结果
+转存完成后，告知用户：
+- 确认文章已成功备份。
+- 展示最终的 `document_url`。
+- 提示：“文章已自动为您存入 [主页/默认目录]。如需移动到特定知识库，请直接告诉我指令。”
 
 ---
 
 ## 预期结果
-成功后反馈：标题 + 最终文档链接 + “云端与本地已同步备份”提示。
+用户发送一个链接，在 30 秒内直接获得一个可以点击阅读的飞书文档链接。
