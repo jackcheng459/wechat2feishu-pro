@@ -1,40 +1,48 @@
-# OpenClaw Skill：WeChat2Feishu-Pro (即时转存版)
+# OpenClaw Skill：WeChat2Feishu-Pro (多级存储决策版)
 
 ## Skill 名称
 `wechat2feishu-pro`
 
 ## 描述
-微信公众号高保真转存机器人。采取“先转存、后调整”的策略，确保文章在用户发送链接后立即安全落盘至飞书云端。
+微信公众号高保真转存机器人。支持自动抓取并提供多层级的存储目标建议（最近使用/默认路径/系统主页），引导用户快速决策。
 
 ---
 
-## 🤖 自动化工作流
+## 🤖 工作流逻辑
 
-### 1. 触发与执行
+### 1. 触发与抓取
 - **触发**：检测到 `mp.weixin.qq.com` 链接。
-- **决策逻辑**：
-    - 机器人应**立即**依次调用 `scrape` 和 `save` 命令。
-    - **存储位置选择**：
-        1. 优先使用用户在会话中提到的位置。
-        2. 若未提及，则使用用户记忆（Memory）中的 `default_save_path`。
-        3. 若无记忆，则默认调用 `python main.py save --dest-type root` 存入用户飞书主页。
+- **执行**：运行 `python main.py scrape "{URL}"` 抓取文章并缓存图片数据。
+- **展示**：向用户展示文章预览（标题、摘要、图片数）。
 
-### 2. 执行指令序列
+### 2. 存储目标询问与决策
+机器人应引导用户按以下优先级确定存储位置：
+
+#### **步骤 A：请求指定或确认**
+机器人询问：“文章处理完毕！您想存到哪？”并提供以下选项供用户快捷选择：
+1. **即时指定**：提示用户可以直接发送一个文件夹/知识库的链接或名称。
+2. **默认路径建议**：若用户记忆（Memory）中有 `default_save_path`，主动推荐：“是否存入您的默认目录：{path_name}？”
+3. **系统主页兜底**：若无默认设置，提示：“或者直接存入您的飞书云文档主页？”
+
+#### **步骤 B：执行保存**
+根据用户的最终回复（编号或路径名称）调用对应的 `save` 命令。
+
+---
+
+## 执行指令示例
+
+### 获取目标列表 (用于展示选项)
 ```bash
-# 第一步：抓取
-/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/main.py scrape "{URL}"
-
-# 第二步：立即转存 (以存入主页为例)
-/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/main.py save --dest-type root
+/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/main.py list-folders
 ```
 
-### 3. 反馈结果
-转存完成后，告知用户：
-- 确认文章已成功备份。
-- 展示最终的 `document_url`。
-- 提示：“文章已自动为您存入 [主页/默认目录]。如需移动到特定知识库，请直接告诉我指令。”
+### 执行保存
+- **存入指定/默认文件夹**：`python main.py save --dest-type folder --dest-token {token}`
+- **存入指定/默认知识库**：`python main.py save --dest-type wiki --dest-token {space_id} --node-token {node_token}`
+- **存入主页**：`python main.py save --dest-type root`
 
 ---
 
 ## 预期结果
-用户发送一个链接，在 30 秒内直接获得一个可以点击阅读的飞书文档链接。
+转存成功后反馈：确认消息 + 最终文档链接。
+注意：本技能不设自动超时处理，必须等待用户确认后方可执行写入操作。
