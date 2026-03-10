@@ -47,10 +47,15 @@ bash setup.sh
 
 ---
 
-## 🤖 OpenClaw 技能集成
-1.  进入项目 `skills/` 目录。
-2.  将 `wechat2feishu-pro.md` 拷贝到您的 OpenClaw 技能库。
-3.  **开启静默模式**：在 `.env` 中设置 `USE_TENANT_MODE=true`，实现全自动后台运行，不再有网页弹窗。
+## 🤖 OpenClaw 技能集成 (小白安装法)
+如果你正在使用 OpenClaw 插件，现在可以一键安装技能：
+1.  在项目目录下运行：
+    ```bash
+    python3 install_skill.py
+    ```
+2.  **它是干什么的？** 这会自动把本项目的“技能说明书”翻译成适合你电脑的路径，并一丢进 OpenClaw 的口袋里。
+3.  从此，你只需要在飞书里给机器人发个链接，剩下的它全包了！
+
 
 ---
 
