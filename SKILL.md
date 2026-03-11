@@ -1,62 +1,39 @@
 ---
 name: wechat2feishu-pro
-version: 1.0.0
-author: zhanghanlin
-description: 高保真微信公众号文章转存飞书工具。支持绕过防盗链、保留排版及图片比例、支持 Wiki 知识库挂载及本地备份。适用于需要将微信内容归档到飞书办公环境的场景。
-tags: [feishu, wechat, document, automation, archiving]
-runtime: python3
-entry: scripts/main.py
-setup: scripts/setup.sh
+description: 高保真微信文章转存专用工具。必须通过执行本地 python 脚本完成，严禁使用内置 MCP 工具。支持自动抓取、Wiki 挂载和图片比例修复。
 ---
 
-# WeChat2Feishu-Pro 官方技能指南
+# WeChat2Feishu-Pro 强制执行指南
 
-本技能允许你将微信公众号链接一键转存至飞书云文档或知识库。
+## ⚠️ 核心规则
+**本技能的所有操作必须通过调用以下指定的本地脚本完成。不要使用任何名为 `feishu_mcp` 或类似的内置工具。**
 
-## ⚙️ 环境初始化
-在首次使用前，需要确保环境已安装。
-执行以下指令完成初始化：
+## 🚀 任务执行指令
+
+### 1. 抓取文章 (Scrape)
+当用户发送链接时，**必须**运行此命令：
 ```bash
-bash scripts/setup.sh
+/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/scripts/main.py scrape "{URL}"
 ```
 
-## 🚀 核心指令流
+### 2. 执行转存 (Save)
+根据用户确认的目标，**必须**运行以下对应的黑盒命令。脚本内部已处理所有权限和 Wiki 逻辑：
 
-### 1. 抓取与预览
-当用户发送微信文章链接时，先执行抓取：
+**存入主页 (默认)：**
 ```bash
-python3 scripts/main.py scrape "{URL}"
-```
-根据返回的 JSON，向用户展示标题、作者、字数及摘要。
-
-### 2. 存储目标选择
-询问用户存储位置。如果用户不确定，可以调用以下指令列出目录：
-```bash
-# 列出云空间文件夹
-python3 scripts/main.py list-folders
-# 列出知识库
-python3 scripts/main.py list-wikis
+/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/scripts/main.py save --dest-type root
 ```
 
-### 3. 执行最终保存
-根据用户选择的目标（folder 或 wiki），执行保存：
+**存入文件夹：**
 ```bash
-# 存入个人文件夹
-python3 scripts/main.py save --dest-type folder --dest-token {token}
-
-# 存入知识库
-python3 scripts/main.py save --dest-type wiki --dest-token {space_id} --node-token {node_token}
-
-# 存入云文档主页
-python3 scripts/main.py save --dest-type root
+/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/scripts/main.py save --dest-type folder --dest-token {token}
 ```
 
-## 🛡️ 授权管理
-如果由于 Token 过期导致失败，提示用户运行：
+**存入知识库 (Wiki)：**
 ```bash
-python3 scripts/auth.py login
+/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/scripts/main.py save --dest-type wiki --dest-token {space_id} --node-token {node_token}
 ```
 
-## 📝 架构与日志
-- 详细架构请参考 [TECHNICAL_ARCHITECTURE.md](references/TECHNICAL_ARCHITECTURE.md)
-- 开发心得请参考 [DEVELOPMENT_LOG.md](references/DEVELOPMENT_LOG.md)
+## 🛠️ 辅助指令
+- 列出目录：`/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/scripts/main.py list-folders`
+- 列出知识库：`/Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/.venv/bin/python /Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu/scripts/main.py list-wikis`
