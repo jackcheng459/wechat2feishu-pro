@@ -5,6 +5,13 @@
       "url": "file:///Users/zhanghanlin/Documents/VibeCoding2/wechat2feishu-pro/tools/test_feed.rss",
       "dest_type": "root",
       "dest_token": ""
+    },
+    {
+      "name": "华洛AI转型纪实",
+      "url": "https://rsshub.app/wechat/msghistory/华洛AI转型纪实",
+      "dest_type": "folder",
+      "dest_token": "EP2AfdCBrlU3xVdVYbGcSFLHnDd",
+      "node_token": ""
     }
   ],
   "check_interval_minutes": 1

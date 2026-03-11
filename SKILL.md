@@ -1,6 +1,6 @@
 ---
 name: wechat2feishu-pro
-description: 高保真微信文章转存专用工具。必须通过执行本地 python 脚本完成，严禁使用内置 MCP 工具。支持自动抓取、Wiki 挂载和图片比例修复。
+description: 高保真微信文章转存专用工具。必须通过执行本地 python 脚本完成，严禁使用内置 MCP 工具。支持自动抓取、Wiki 挂载、情报源自动识别与哨兵投递。
 ---
 
 # wechat2feishu-pro 强制执行指南
@@ -10,21 +10,21 @@ description: 高保真微信文章转存专用工具。必须通过执行本地 
 
 ## 🚀 任务执行指令
 
-### 1. 抓取文章 (Scrape)
-当用户发送链接时，**必须**运行此命令：
-```bash
-./.venv/bin/python ./scripts/main.py scrape "{URL}"
-```
+### 1. 抓取与存储建议 (Scrape & Auto-Sentinel)
+当用户发送链接时，**必须**按此流程执行：
+1.  **抓取**：`./.venv/bin/python ./scripts/main.py scrape "{URL}"`
+2.  **情报源识别**：`./.venv/bin/python ./tools/discover_feed.py "{URL}"`
+3.  **询问**：将抓取成功的信息告诉用户。同时，如果 `discover_feed.py` 成功识别了公众号，**主动询问**用户是否要将其加入自动监听，并列出当前的飞书目录供用户选择一个专用的保存文件夹。
 
 ### 2. 执行转存 (Save)
-根据用户确认的目标，**必须**运行以下对应的黑盒命令。脚本内部已处理所有权限和 Wiki 逻辑：
+根据用户确认的目标执行转存。**必须**使用以下对应的黑盒命令：
 
 **存入主页 (默认)：**
 ```bash
 ./.venv/bin/python ./scripts/main.py save --dest-type root
 ```
 
-**存入文件夹：**
+**存入指定文件夹：**
 ```bash
 ./.venv/bin/python ./scripts/main.py save --dest-type folder --dest-token {token}
 ```
@@ -32,6 +32,12 @@ description: 高保真微信文章转存专用工具。必须通过执行本地 
 **存入知识库 (Wiki)：**
 ```bash
 ./.venv/bin/python ./scripts/main.py save --dest-type wiki --dest-token {space_id} --node-token {node_token}
+```
+
+### 3. 配置自动哨兵 (Add Sentinel Feed)
+如果用户同意将该公众号加入自动监听，并指定了目标文件夹，执行以下命令：
+```bash
+./.venv/bin/python ./tools/sentinel.py add-feed --name "{公众号名称}" --url "{RSS_URL}" --dest-type "{type}" --dest-token "{token}" --node-token "{node_token}"
 ```
 
 ## 🛠️ 辅助指令
