@@ -44,20 +44,41 @@
 
 ## 🚀 快速上手
 
-### 1. 通过 OpenClaw 一键集成 (推荐)
-在您的终端中执行：
+### 1. 克隆到 OpenClaw Skills 目录
 ```bash
-openclaw skills install https://github.com/jackcheng459/wechat2feishu-pro
+git clone https://github.com/jackcheng459/wechat2feishu-pro \
+  ~/.openclaw/skills/wechat2feishu-pro
 ```
 
 ### 2. 环境初始化
 ```bash
 cd ~/.openclaw/skills/wechat2feishu-pro
 bash scripts/setup.sh
-cp .env.example .env  # 填入 APP_ID, APP_SECRET, ADMIN_USER_ID
 ```
 
-### 3. 配置“情报哨兵”自动巡逻
+### 3. 配置飞书应用凭证
+```bash
+cp .env.example .env
+```
+打开 `.env`，填入以下内容：
+```
+FEISHU_APP_ID=cli_xxxxxxxxxxxxxxxx
+FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+> `ADMIN_USER_ID` 无需手动填写，首次运行 `auth login` 后会自动写入。
+
+### 4. 首次授权
+```bash
+.venv/bin/python scripts/auth.py login
+```
+
+### 5. 升级（已安装用户）
+```bash
+cd ~/.openclaw/skills/wechat2feishu-pro
+git pull origin main
+```
+
+### 6. 配置”情报哨兵”自动巡逻
 ```bash
 # 查看当前巡逻中的情报源
 ./.venv/bin/python ./tools/sentinel.py list-feeds

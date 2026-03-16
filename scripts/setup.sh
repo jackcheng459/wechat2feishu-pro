@@ -19,12 +19,12 @@ python3 -m venv .venv
 echo "📥 正在安装必要插件 (dependencies)..."
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r scripts/requirements.txt
 
 echo "🌐 正在安装网页采集引擎 (Playwright)..."
 playwright install chromium
 
 echo "--------------------------------------"
 echo "✅ 安装成功！"
-echo "👉 下一步：请修改项目中的 .env 文件，填入您的飞书 App 信息。"
-echo "👉 然后运行：python auth.py login 进行首次授权。"
+echo "👉 下一步：cp .env.example .env，填入您的 FEISHU_APP_ID 和 FEISHU_APP_SECRET。"
+echo "👉 然后运行：.venv/bin/python scripts/auth.py login 进行首次授权。"

@@ -33,13 +33,13 @@
 
 ### 获取目标列表 (用于展示选项)
 ```bash
-cd ~/Documents/VibeCoding2/WeChat2Feishu-Pro && .venv/bin/python main.py list-folders
+cd ~/.openclaw/skills/wechat2feishu-pro && .venv/bin/python scripts/main.py list-folders
 ```
 
 ### 执行保存
-- **存入指定/默认文件夹**：`cd ~/Documents/VibeCoding2/WeChat2Feishu-Pro && .venv/bin/python main.py save --dest-type folder --dest-token {token}`
-- **存入指定/默认知识库**：`cd ~/Documents/VibeCoding2/WeChat2Feishu-Pro && .venv/bin/python main.py save --dest-type wiki --dest-token {space_id} --node-token {node_token}`
-- **存入主页**：`cd ~/Documents/VibeCoding2/WeChat2Feishu-Pro && .venv/bin/python main.py save --dest-type root`
+- **存入指定/默认文件夹**：`cd ~/.openclaw/skills/wechat2feishu-pro && .venv/bin/python scripts/main.py save --dest-type folder --dest-token {token}`
+- **存入指定/默认知识库**：`cd ~/.openclaw/skills/wechat2feishu-pro && .venv/bin/python scripts/main.py save --dest-type wiki --dest-token {space_id} --node-token {node_token}`
+- **存入主页**：`cd ~/.openclaw/skills/wechat2feishu-pro && .venv/bin/python scripts/main.py save --dest-type root`
 
 
 ---
