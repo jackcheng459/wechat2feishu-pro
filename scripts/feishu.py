@@ -232,38 +232,74 @@ def create_document(
 
 
 
-    # 5. 修补图片（保持逻辑不变...）
+    # 5. 修补图片
     if image_urls:
         print(json.dumps({"status": "uploading_images", "message": "正在注入高保真图片..."}), flush=True)
         blocks_resp = requests.get(f"{FEISHU_BASE}/docx/v1/documents/{doc_token}/blocks?page_size=500", headers=_headers(user_token)).json()
         image_blocks = [b for b in blocks_resp.get("data", {}).get("items", []) if b["block_type"] == 27]
+        
         patched_count = 0
         for i in range(min(len(image_blocks), len(image_urls))):
             block, img_url = image_blocks[i], image_urls[i]
             block_id = block["block_id"]
             try:
                 base_img_url = img_url.split("?")[0]
+                # 优先从本地已缓存的二进制数据中匹配
                 b64 = next((data for u, data in (image_data or {}).items() if u.split("?")[0] == base_img_url), "")
+                
                 import base64 as _base64
+                import io
+                from PIL import Image
+                
                 if b64:
                     img_bytes = _base64.b64decode(b64)
-                    ext, mime = (".png", "image/png") if img_bytes[:4] == b'\x89PNG' else (".jpg", "image/jpeg")
                 else:
-                    r = requests.get(img_url, timeout=10); img_bytes = r.content; mime = r.headers.get("content-type", "image/jpeg"); ext = ".jpg"
-                img_w, img_h = 800, 600
-                try:
-                    from PIL import Image
-                    import io
-                    with Image.open(io.BytesIO(img_bytes)) as im: img_w, img_h = im.size
-                except: pass
-                up_res = requests.post(f"{FEISHU_BASE}/drive/v1/medias/upload_all", headers={"Authorization": f"Bearer {user_token}"}, 
-                                       data={"file_name": f"i_{block_id}{ext}", "parent_type": "docx_image", "parent_node": block_id, "size": str(len(img_bytes)), "extra": json.dumps({"drive_route_token": doc_token})},
-                                       files={"file": (f"i{ext}", img_bytes, mime)}, timeout=30).json()
+                    # 备选：如果缓存中没有，尝试实时抓取 (虽然可能被拦截，但作为兜底)
+                    r = requests.get(img_url, timeout=10)
+                    img_bytes = r.content
+                
+                # 精准识别格式和尺寸
+                with Image.open(io.BytesIO(img_bytes)) as im:
+                    img_w, img_h = im.size
+                    img_format = im.format.lower() # png, jpeg, webp
+                
+                mime = f"image/{img_format}"
+                ext = f".{img_format}"
+                if img_format == "jpeg": ext = ".jpg"
+
+                # 核心：上传到飞书 docx_image 空间
+                up_res = requests.post(
+                    f"{FEISHU_BASE}/drive/v1/medias/upload_all", 
+                    headers={"Authorization": f"Bearer {user_token}"}, 
+                    data={
+                        "file_name": f"i_{block_id}{ext}", 
+                        "parent_type": "docx_image", 
+                        "parent_node": doc_token, # 关键：指向文档本身
+                        "size": str(len(img_bytes)), 
+                        "extra": json.dumps({"drive_route_token": doc_token})
+                    },
+                    files={"file": (f"i{ext}", img_bytes, mime)}, 
+                    timeout=30
+                ).json()
+                
                 if up_res.get("code") == 0:
-                    requests.patch(f"{FEISHU_BASE}/docx/v1/documents/{doc_token}/blocks/{block_id}", headers=_headers(user_token), json={"replace_image": {"token": up_res["data"]["file_token"], "width": img_w, "height": img_h}}, timeout=15)
-                    patched_count += 1
-                    print(json.dumps({"status": "image_progress", "current": patched_count, "total": len(image_urls)}), flush=True)
-            except: pass
+                    patch_resp = requests.patch(
+                        f"{FEISHU_BASE}/docx/v1/documents/{doc_token}/blocks/{block_id}", 
+                        headers=_headers(user_token), 
+                        json={"replace_image": {"token": up_res["data"]["file_token"], "width": img_w, "height": img_h}}, 
+                        timeout=15
+                    ).json()
+                    
+                    if patch_resp.get("code") == 0:
+                        patched_count += 1
+                        print(json.dumps({"status": "image_progress", "current": patched_count, "total": len(image_urls)}), flush=True)
+                    else:
+                        print(f"⚠️ Patch Block 失败: {patch_resp.get('msg')}", flush=True)
+                else:
+                    print(f"⚠️ 上传 Media 失败: {up_res.get('msg')}", flush=True)
+                    
+            except Exception as e:
+                print(f"💥 修补图片时发生异常: {e}", flush=True)
 
     # 6. 最后一步：赋予管理权 (如果是 Tenant 模式创建，此步至关重要)
     _grant_management_permission(doc_token, user_token)
